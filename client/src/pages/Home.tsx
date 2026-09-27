@@ -139,26 +139,31 @@ function cleanLetters(value: string) {
   return value.toLowerCase().replace(/[^a-z]/g, "");
 }
 
-function flamesLogic(firstName: string, secondName: string): FlamesResult {
-  const first = cleanLetters(firstName).split("");
-  const second = cleanLetters(secondName).split("");
+function flamesLogic(firstName: string, secondName: string): FlamesResult | null {
+  // Normalize to lowercase and remove spaces, then cancel one matching
+  // occurrence at a time exactly as in the original FLAMES calculation.
+  const first = firstName.toLowerCase().replace(/\s/g, "").split("");
+  const second = secondName.toLowerCase().replace(/\s/g, "").split("");
 
-  for (let index = first.length - 1; index >= 0; index -= 1) {
+  for (let index = 0; index < first.length; index += 1) {
     const matchIndex = second.indexOf(first[index]);
     if (matchIndex !== -1) {
       first.splice(index, 1);
       second.splice(matchIndex, 1);
+      index -= 1;
     }
   }
 
-  const count = Math.max(first.length + second.length, 1);
+  const count = first.length + second.length;
+  if (count === 0) return null;
+
   let remaining = [...FLAMES_LETTERS];
   let start = 0;
 
   while (remaining.length > 1) {
-    const index = (start + count - 1) % remaining.length;
-    remaining.splice(index, 1);
-    start = index % (remaining.length || 1);
+    const cutIndex = (start + count - 1) % remaining.length;
+    remaining.splice(cutIndex, 1);
+    start = cutIndex % remaining.length;
   }
 
   const winner = remaining[0];
@@ -227,6 +232,12 @@ export default function Home() {
     }
 
     const computed = flamesLogic(cleanOne, cleanTwo);
+    if (!computed) {
+      setError("No letters remain after matching those names. Try different names.");
+      setStage("form");
+      setResult(null);
+      return;
+    }
     lastResult.current = { result: computed, nameOne: cleanOne, nameTwo: cleanTwo };
     setError("");
     setPanicMessage("");
